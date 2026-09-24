@@ -171,7 +171,7 @@ def get_main_keyboard():
     return markup
 
 # --- TELEGRAM BOT QISMI ---
-TOKEN = "8844618317:AAHIf8YAuHNl3IBl-hPnDJP0h1Jx-Fzy1LA"
+TOKEN = "8844618317:AAGBeTah2HHaTRKocvxgoGpZa3kB79xAPMw"
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
