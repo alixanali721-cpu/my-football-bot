@@ -5,7 +5,7 @@ from flask import Flask
 from threading import Thread
 import telebot
 
-# --- FLASK SERVER (Render doimiy ishlashi uchun) ---
+# --- FLASK SERVER ---
 app = Flask(__name__)
 
 @app.route('/')
@@ -62,13 +62,13 @@ def generate_ai_signal(match="10 de Noviembre Wilstermann Cooperativas vs Real C
     risk = "PAST RISK 🟢" if adjusted_prob > 65 else ("O'RTA RISK ⚠️" if adjusted_prob > 45 else "YUQORI RISK 🔴")
     
     text = (
-        f"🎯 **AI LIVE & KOEFFITSIENT TAHLILI**\n\n"
-        f"⚽ **O'yin:** {match}\n"
-        f"📊 **Hisob:** ({team1_score}) vs ({team2_score})\n"
-        f"📉 **Koeffitsient dinamikasi:** {trend} ({percent:.1f}%)\n"
-        f"📈 **Moslashtirilgan g'alaba ehtimoli:** {adjusted_prob:.1f}%\n"
-        f"🔥 **Holat:** {risk}\n\n"
-        f"💎 **1xBET UCHUN OPTIMAL TAVSIYA:**\n"
+        f"🎯 <b>AI LIVE & KOEFFITSIENT TAHLILI</b>\n\n"
+        f"⚽ <b>O'yin:</b> {match}\n"
+        f"📊 <b>Hisob:</b> ({team1_score}) vs ({team2_score})\n"
+        f"📉 <b>Koeffitsient dinamikasi:</b> {trend} ({percent:.1f}%)\n"
+        f"📈 <b>Moslashtirilgan g'alaba ehtimoli:</b> {adjusted_prob:.1f}%\n"
+        f"🔥 <b>Holat:</b> {risk}\n\n"
+        f"💎 <b>1xBET UCHUN OPTIMAL TAVSIYA:</b>\n"
         f"• Asosiy tikish: G'1 yoki 1X\n"
         f"• Total: Total 1.5 Ko'p\n"
     )
@@ -81,7 +81,7 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start', 'live'])
 def send_analysis(message):
     analysis_text = generate_ai_signal()
-    bot.reply_to(message, analysis_text, parse_mode="Markdown")
+    bot.reply_to(message, analysis_text, parse_mode="HTML")
 
 if __name__ == '__main__':
     Thread(target=run_flask).start()
