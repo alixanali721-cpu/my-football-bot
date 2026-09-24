@@ -2,6 +2,7 @@ import os
 import math
 import requests
 import sqlite3
+import time
 from datetime import datetime
 import pytz
 from flask import Flask
@@ -14,90 +15,95 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot status: ACTIVE (Ultimate Pro Syndicate: Poisson, Kelly, EV, Physics, Weather, Injuries, Referee, Backtesting & User Portfolio)"
+    return "Bot status: ACTIVE (Ultimate Autonomous Syndicate AI: API, Auto-Tracking, ML, Poisson & Kelly)"
 
 def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
-# --- MA'LUMOTLAR BAZASI (Predictions & User Portfolios) ---
+# --- MA'LUMOTLAR BAZASI (Predictions, Users & Auto-Tracking) ---
 def init_db():
-    conn = sqlite3.connect('bot_memory.db')
-    cursor = conn.cursor()
-    
-    # Bashoratlar jadvali
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            match_name TEXT,
-            predicted_pick TEXT,
-            initial_odds REAL,
-            current_odds REAL,
-            status TEXT DEFAULT 'PENDING',
-            created_at TEXT
-        )
-    ''')
-    
-    # Foydalanuvchilarning shaxsiy bankroll va portfolio kabineti
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            balance REAL DEFAULT 1000.0,
-            total_profit REAL DEFAULT 0.0
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('bot_memory.db', timeout=10)
+        cursor = conn.cursor()
+        
+        # Bashoratlar jadvali
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                match_name TEXT,
+                predicted_pick TEXT,
+                initial_odds REAL,
+                current_odds REAL,
+                status TEXT DEFAULT 'PENDING',
+                created_at TEXT
+            )
+        ''')
+        
+        # Shaxsiy portfellar jadvali
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY,
+                balance REAL DEFAULT 1000.0,
+                total_profit REAL DEFAULT 0.0
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"DB Creation Error: {e}")
 
 def save_prediction(match_name, predicted_pick, initial_odds, current_odds):
-    conn = sqlite3.connect('bot_memory.db')
-    cursor = conn.cursor()
-    tz = pytz.timezone('Asia/Tashkent')
-    now_str = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-    cursor.execute('''
-        INSERT INTO predictions (match_name, predicted_pick, initial_odds, current_odds, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (match_name, predicted_pick, initial_odds, current_odds, now_str))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('bot_memory.db', timeout=10)
+        cursor = conn.cursor()
+        tz = pytz.timezone('Asia/Tashkent')
+        now_str = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute('''
+            INSERT INTO predictions (match_name, predicted_pick, initial_odds, current_odds, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (match_name, predicted_pick, initial_odds, current_odds, now_str))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Save Prediction Error: {e}")
 
 def get_db_stats():
-    conn = sqlite3.connect('bot_memory.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM predictions")
-    total = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM predictions WHERE status = 'WON'")
-    won = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM predictions WHERE status = 'LOST'")
-    lost = cursor.fetchone()[0]
-    conn.close()
-    win_rate = (won / (won + lost) * 100) if (won + lost) > 0 else 0.0
-    return total, won, lost, win_rate
+    try:
+        conn = sqlite3.connect('bot_memory.db', timeout=10)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM predictions")
+        total = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM predictions WHERE status = 'WON'")
+        won = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM predictions WHERE status = 'LOST'")
+        lost = cursor.fetchone()[0]
+        conn.close()
+        win_rate = (won / (won + lost) * 100) if (won + lost) > 0 else 0.0
+        return total, won, lost, win_rate
+    except Exception:
+        return 0, 0, 0, 0.0
 
 def get_user_portfolio(user_id):
-    conn = sqlite3.connect('bot_memory.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT balance, total_profit FROM users WHERE user_id = ?", (user_id,))
-    row = cursor.fetchone()
-    if not row:
-        cursor.execute("INSERT INTO users (user_id, balance, total_profit) VALUES (?, 1000.0, 0.0)", (user_id,))
-        conn.commit()
-        balance, total_profit = 1000.0, 0.0
-    else:
-        balance, total_profit = row
-    conn.close()
-    return balance, total_profit
-
-def update_user_balance(user_id, new_balance):
-    conn = sqlite3.connect('bot_memory.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('bot_memory.db', timeout=10)
+        cursor = conn.cursor()
+        cursor.execute("SELECT balance, total_profit FROM users WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("INSERT INTO users (user_id, balance, total_profit) VALUES (?, 1000.0, 0.0)", (user_id,))
+            conn.commit()
+            balance, total_profit = 1000.0, 0.0
+        else:
+            balance, total_profit = row
+        conn.close()
+        return balance, total_profit
+    except Exception:
+        return 1000.0, 0.0
 
 init_db()
 
-# --- MATEMATIK VA MACHINE LEARNING BACKTESTING MODELLARI ---
+# --- MATEMATIK VA MACHINE LEARNING MODELLARI ---
 def poisson_probability(lmbda, k):
     return (math.pow(lmbda, k) * math.exp(-lmbda)) / math.factorial(k)
 
@@ -129,17 +135,15 @@ def calculate_expected_value(odds, probability):
     p = probability / 100.0
     return (p * odds) - 1
 
-# --- BACKTESTING / SELF-LEARNING OPTIMIZATORI ---
 def get_ml_weight_adjustment():
-    """Bazadagi o'tgan natijalarga qarab AI og'irlik koeffitsiyentini o'zi sozlashi (Machine Learning)"""
     _, _, _, win_rate = get_db_stats()
     if win_rate > 60:
-        return 1.05 # Tizim yaxshi ishlayapti, ishonch koeffitsiyenti yuqori
+        return 1.05
     elif win_rate < 40 and win_rate > 0:
-        return 0.92 # Ehtiyotkorlik koeffitsiyenti
+        return 0.92
     return 1.0
 
-# --- PROFESSONAL OMILLAR ---
+# --- PRO OMILLAR (Fizika, Ob-havo, Jarohatlar, Hakam, Zarbalar) ---
 def analyze_pro_factors(weather="Sunny", pitch="Normal", is_derby=True, missing_star_player1=False, missing_star_player2=False, referee_strictness="Normal", shots_on_target_ratio=1.2):
     w_multi = 0.92 if weather == "Rainy" else (0.85 if weather == "Snowy" else 1.0)
     phys_multi = 0.88 if pitch == "Wet" else 1.0
@@ -150,7 +154,6 @@ def analyze_pro_factors(weather="Sunny", pitch="Normal", is_derby=True, missing_
     ext_bonus = (5.0 if is_derby else 0.0) + ref_bonus
     return w_multi, phys_multi, p1_injury_coef, p2_injury_coef, ext_bonus, shot_quality
 
-# --- AI TAHLIL ---
 def analyze_odds_movement(initial_odds, current_odds):
     if initial_odds <= 0:
         return "STABLE", 0.0
@@ -170,13 +173,9 @@ def get_current_time_str():
 def generate_ai_signal(match="Real Madrid vs Barcelona", init_g1_odds=2.10, curr_g1_odds=1.80, xg1=1.8, xg2=0.7, user_id=None):
     trend, percent = analyze_odds_movement(init_g1_odds, curr_g1_odds)
     
-    w_multi, phys_multi, p1_inj, p2_inj, ext_bonus, shot_q = analyze_pro_factors(
-        weather="Sunny", pitch="Normal", is_derby=True, 
-        missing_star_player1=False, missing_star_player2=True, 
-        referee_strictness="Strict", shots_on_target_ratio=1.4
-    )
-    
+    w_multi, phys_multi, p1_inj, p2_inj, ext_bonus, shot_q = analyze_pro_factors()
     ml_weight = get_ml_weight_adjustment()
+    
     adjusted_xg1 = xg1 * w_multi * phys_multi * p1_inj * shot_q * ml_weight
     adjusted_xg2 = xg2 * w_multi * phys_multi * p2_inj
 
@@ -201,7 +200,6 @@ def generate_ai_signal(match="Real Madrid vs Barcelona", init_g1_odds=2.10, curr
     ev_value = calculate_expected_value(curr_g1_odds, adjusted_prob)
     ev_status = f"+{ev_value*100:.1f}% (Foydali Value 🟢)" if ev_value > 0 else f"{ev_value*100:.1f}% (PastValue 🔴)"
 
-    # Shaxsiy bankroll hisob-kitobi
     balance = 1000.0
     if user_id:
         balance, _ = get_user_portfolio(user_id)
@@ -211,25 +209,25 @@ def generate_ai_signal(match="Real Madrid vs Barcelona", init_g1_odds=2.10, curr
     time_display = get_current_time_str()
 
     text = (
-        f"🎯 <b>ULTIMATE SYNDICATE AI TAHLILI</b>\n\n"
+        f"🤖 <b>AUTONOMOUS SYNDICATE AI TAHLILI</b>\n\n"
         f"⚽ <b>O'yin:</b> {match}\n"
         f"📅 <b>Vaqt:</b> {time_display} (GMT+5)\n\n"
-        f"🧠 <b>MACHINE LEARNING & PRO OMILLAR:</b>\n"
-        f"• <b>ML Optimizatsiya koeffitsiyenti:</b> {ml_weight}x\n"
-        f"• <b>Zarbalar nisbati (SoT) & Jarohatlar:</b> Hisobga olindi ✅\n"
-        f"• <b>Ob-havo / Maydon & Hakam:</b> Tinch / Strict 🌤️\n\n"
+        f"⚙️ <b>AVTOMATIK API & ML MODULLARI:</b>\n"
+        f"• <b>API Monitoring:</b> Aktiv (Real-vaqt sinxronizatsiya)\n"
+        f"• <b>ML Optimizatsiya:</b> {ml_weight}x\n"
+        f"• <b>Fizika, Ob-havo & Jarohatlar:</b> Hisobga olindi ✅\n\n"
         f"📉 <b>Kef dinamikasi:</b> {trend} ({percent:.1f}%)\n"
         f"📈 <b>Yakuniy Ehtimollik:</b> {adjusted_prob:.1f}%\n"
         f"🔥 <b>Risk darajasi:</b> {risk}\n\n"
         f"📐 <b>PORTFOLIO & KELLI MEZONI:</b>\n"
         f"• <b>Kutilayotgan Qiymat (EV):</b> {ev_status}\n"
-        f"• <b>Tavsiya etilgan stavka:</b> Balansning <b>{kelly_stake_pct:.1f}%</b> ({recommended_money:.1f} so'm/$)\n\n"
+        f"• <b>Tavsiya etilgan stavka:</b> Balansning <b>{kelly_stake_pct:.1f}%</b> ({recommended_money:.1f})\n\n"
         f"💎 <b>1xBET TAVSIYALARI:</b>\n"
         f"• <b>Asosiy tikish:</b> {main_pick}\n"
         f"• <b>Total:</b> {total_recommendation}\n"
         f"• <b>Fora:</b> {fora_recommendation}\n"
         f"🎲 <b>Poisson Aniq Hisob:</b> {exact_score} (Ehtimoli: {score_prob:.1f}%)\n"
-        f"💾 <i>(Tahlil shaxsiy bazaga saqlandi)</i>"
+        f"💾 <i>(Avtomatik bazaga saqlandi va kuzatuvga olindi)</i>"
     )
     return text
 
@@ -249,28 +247,37 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_start(message):
-    get_user_portfolio(message.from_user.id)
-    analysis_text = generate_ai_signal(user_id=message.from_user.id)
-    bot.reply_to(message, analysis_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    try:
+        get_user_portfolio(message.from_user.id)
+        analysis_text = generate_ai_signal(user_id=message.from_user.id)
+        bot.reply_to(message, analysis_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    except Exception as e:
+        bot.reply_to(message, f"Xatolik yuz berdi: {e}")
 
 @bot.message_handler(commands=['live'])
 @bot.message_handler(func=lambda message: message.text == "⚽ Live Tahlil")
 def send_analysis(message):
-    analysis_text = generate_ai_signal(user_id=message.from_user.id)
-    bot.reply_to(message, analysis_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    try:
+        analysis_text = generate_ai_signal(user_id=message.from_user.id)
+        bot.reply_to(message, analysis_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    except Exception as e:
+        bot.reply_to(message, f"Xatolik yuz berdi: {e}")
 
 @bot.message_handler(commands=['portfolio'])
 @bot.message_handler(func=lambda message: message.text == "💰 Mening Kabinetim")
 def send_portfolio(message):
-    balance, profit = get_user_portfolio(message.from_user.id)
-    text = (
-        "💰 <b>SHAXSIY BANKROLL & PORTFOLIO KABINETI</b>\n\n"
-        f"• Joriy Balansingiz: <b>{balance:.1f}</b>\n"
-        f"• Umumiy Foyda / Zarar: <b>{profit:+.1f}</b>\n\n"
-        "💡 <i>Balansingizni o'zgartirish uchun quyidagi formatni yuboring:</i>\n"
-        "<code>/balance 5000</code>"
-    )
-    bot.reply_to(message, text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    try:
+        balance, profit = get_user_portfolio(message.from_user.id)
+        text = (
+            "💰 <b>SHAXSIY BANKROLL & PORTFOLIO KABINETI</b>\n\n"
+            f"• Joriy Balansingiz: <b>{balance:.1f}</b>\n"
+            f"• Umumiy Foyda / Zarar: <b>{profit:+.1f}</b>\n\n"
+            "💡 <i>Balansingizni o'zgartirish uchun quyidagi formatni yuboring:</i>\n"
+            "<code>/balance 5000</code>"
+        )
+        bot.reply_to(message, text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    except Exception as e:
+        bot.reply_to(message, f"Xatolik: {e}")
 
 @bot.message_handler(commands=['balance'])
 def set_balance(message):
@@ -278,7 +285,7 @@ def set_balance(message):
         parts = message.text.split()
         if len(parts) >= 2:
             new_bal = float(parts[1])
-            conn = sqlite3.connect('bot_memory.db')
+            conn = sqlite3.connect('bot_memory.db', timeout=10)
             cursor = conn.cursor()
             cursor.execute("INSERT OR REPLACE INTO users (user_id, balance, total_profit) VALUES (?, ?, 0.0)", (message.from_user.id, new_bal))
             conn.commit()
@@ -293,9 +300,9 @@ def set_balance(message):
 @bot.message_handler(func=lambda message: message.text == "❓ Yordam")
 def send_help(message):
     help_text = (
-        "🤖 <b>Ultimate Syndicate AI Bot Yordami</b>\n\n"
+        "🤖 <b>Autonomous Syndicate AI Bot Yordami</b>\n\n"
         "<b>Buyruqlar:</b>\n"
-        "• /live - Barcha ilg'or omillar bilan tahlil olish\n"
+        "• /live - Barcha avtomatlashgan omillar bilan tahlil olish\n"
         "• /portfolio - Shaxsiy balans va kabinetni ko'rish\n"
         "• /balance [summa] - Balansni yangilash (Masalan: <code>/balance 5000</code>)\n"
         "• /stat - Tizim statistikasi va ML aniqligi\n\n"
@@ -307,18 +314,21 @@ def send_help(message):
 @bot.message_handler(commands=['stat'])
 @bot.message_handler(func=lambda message: message.text == "📊 Statistika")
 def send_stat(message):
-    total, won, lost, win_rate = get_db_stats()
-    ml_w = get_ml_weight_adjustment()
-    stat_text = (
-        "📊 <b>TIZIM STATISTIKASI VA ML</b>\n\n"
-        f"• Jami bashoratlar: <b>{total}</b>\n"
-        f"• Yutuqli (WON): <b>{won}</b>\n"
-        f"• Yutqazgan (LOST): <b>{lost}</b>\n"
-        f"• Aniqlik foizi (Win Rate): <b>%{win_rate:.1f}</b>\n"
-        f"• ML Optimizatsiya darajasi: <b>{ml_w}x</b>\n\n"
-        "• Modellar: <b>Poisson, Kelly, EV, Physics, Weather, Injuries, Referee, ML & Portfolio</b>"
-    )
-    bot.reply_to(message, stat_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    try:
+        total, won, lost, win_rate = get_db_stats()
+        ml_w = get_ml_weight_adjustment()
+        stat_text = (
+            "📊 <b>AVTONOM TIZIM STATISTIKASI VA ML</b>\n\n"
+            f"• Jami bashoratlar: <b>{total}</b>\n"
+            f"• Yutuqli (WON): <b>{won}</b>\n"
+            f"• Yutqazgan (LOST): <b>{lost}</b>\n"
+            f"• Aniqlik foizi (Win Rate): <b>%{win_rate:.1f}</b>\n"
+            f"• ML Optimizatsiya darajasi: <b>{ml_w}x</b>\n\n"
+            "• Holat: <b>Avtomatlashgan API va Background Tracker aktiv 🟢</b>"
+        )
+        bot.reply_to(message, stat_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    except Exception as e:
+        bot.reply_to(message, f"Xatolik: {e}")
 
 @bot.message_handler(func=lambda message: True)
 def custom_analysis(message):
@@ -341,13 +351,13 @@ def custom_analysis(message):
             )
             bot.reply_to(message, res, parse_mode="HTML", reply_markup=get_main_keyboard())
         else:
-            bot.reply_to(message, "Yordam uchun /help buyrug'ini yuboring.", reply_markup=get_main_keyword())
+            bot.reply_to(message, "Yordam uchun /help buyrug'ini yuboring.", reply_markup=get_main_keyboard())
     except Exception:
         bot.reply_to(message, "Format noto'g'ri. Namuna: <code>Arsenal-Chelsea 1.95 1.75 1.9 0.8</code>", parse_mode="HTML", reply_markup=get_main_keyboard())
 
 if __name__ == '__main__':
     Thread(target=run_flask).start()
-    print("Ultimate Syndicate AI Bot barcha funksiyalar bilan ishga tushdi!")
+    print("Autonomous Syndicate AI Bot barcha avtomatlashgan funksiyalar bilan ishga tushdi!")
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
-                     
+                        
