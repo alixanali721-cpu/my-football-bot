@@ -8,17 +8,17 @@ from threading import Thread
 import telebot
 from telebot import types
 
-# --- FLASK SERVER ---
+# --- FLASK SERVER (Render barqarorligi uchun) ---
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot status: ACTIVE (Adaptive AI, Live API & Odds Tracker)"
+    return "Bot status: ACTIVE (Adaptive AI, Database & Live API)"
 
 def run_flask():
     app.run(host='0.0.0.0', port=8080)
 
-# --- VERITABANI İŞLEMLERİ (2-BOSQICH) ---
+# --- 2-BOSQICH: MA'LUMOTLAR BAZASI VA BARQARORLIK (`bot_memory.db`) ---
 def init_db():
     conn = sqlite3.connect('bot_memory.db')
     cursor = conn.cursor()
@@ -48,6 +48,7 @@ def save_prediction(match_name, predicted_pick, initial_odds, current_odds):
     conn.commit()
     conn.close()
 
+# --- 1-BOSQICH: SIGNALLAR ANIQLIGINI MONITORING QILISH ---
 def get_db_stats():
     conn = sqlite3.connect('bot_memory.db')
     cursor = conn.cursor()
@@ -68,14 +69,13 @@ def get_db_stats():
 
 init_db()
 
-# --- JONLI SPORT API INTEGRATSIYASI (3-BOSQICH) ---
+# --- 3-BOSQICH: JONLI SPORT API INTEGRATSIYASI ---
 def fetch_live_matches_from_api():
     """
-    Jonli futbol o'yinlari va API orqali ma'lumotlarni tortib olish servisi.
-    API Kaliti ulangan taqdirda real vaqtdagi matchlarni qaytaradi.
+    Jonli futbol o'yinlarini va koeffitsient ma'lumotlarini tashqi API orqali olish.
     """
     API_URL = "https://api.football-data.org/v4/matches"
-    headers = {'X-Auth-Token': 'YOUR_FREE_FOOTBALL_DATA_API_KEY'} # Zarur bo'lsa tekin API token qo'yiladi
+    headers = {'X-Auth-Token': 'YOUR_FREE_FOOTBALL_DATA_API_KEY'}
     try:
         response = requests.get(API_URL, headers=headers, timeout=5)
         if response.status_code == 200:
@@ -87,12 +87,12 @@ def fetch_live_matches_from_api():
                 away = m['awayTeam']['name']
                 return f"{home} vs {away}", 0, 0, 1.90, 1.72, 1.6, 0.8
     except Exception as e:
-        print(f"API ulanishda xatolik: {e}")
+        print(f"API ulanish xatoligi: {e}")
     
-    # Standart zaxira jonli match ma'lumoti
+    # API ishlamaganda zaxira jonli match ma'lumoti
     return "Real Madrid vs Barcelona", 0, 0, 2.10, 1.80, 1.8, 0.7
 
-# --- AI ALGORITMI VA TAHLIL (1-BOSQICH) ---
+# --- AI ALGORITMI VA TAHLIL ---
 def analyze_odds_movement(initial_odds, current_odds):
     if initial_odds <= 0:
         return "STABLE", 0.0
@@ -117,7 +117,7 @@ def get_current_time_str():
     return now.strftime("%d.%m.%Y | %H:%M")
 
 def generate_ai_signal(match=None, team1_score=0, team2_score=0, init_g1_odds=None, curr_g1_odds=None, xg1=None, xg2=None, match_time=None):
-    # Agar parametrlar berilmagan bo'lsa, 3-bosqich API'dan avtomatik tortadi
+    # Parametr kiritilmagan bo'lsa, 3-bosqich API'dan avtomatik oladi
     if match is None:
         match, team1_score, team2_score, init_g1_odds, curr_g1_odds, xg1, xg2 = fetch_live_matches_from_api()
 
@@ -145,7 +145,7 @@ def generate_ai_signal(match=None, team1_score=0, team2_score=0, init_g1_odds=No
     time_display = match_time if match_time else get_current_time_str()
 
     text = (
-        f"🎯 <b>AI LIVE & FULL MATCH TAHLILI (API & AUTO)</b>\n\n"
+        f"🎯 <b>AI LIVE & FULL MATCH TAHLILI (API Integration)</b>\n\n"
         f"⚽ <b>O'yin:</b> {match}\n"
         f"📅 <b>Sana/Vaqt:</b> {time_display} (GMT+5)\n"
         f"📊 <b>Hisob:</b> ({team1_score}) vs ({team2_score})\n"
@@ -191,7 +191,7 @@ def send_help(message):
     help_text = (
         "🤖 <b>AI Football Bot Yordam Menyusi</b>\n\n"
         "<b>Buyruqlar:</b>\n"
-        "• /live - Jonli API ma'lumotlari orqali AI tahlilini olish\n"
+        "• /live - Jonli API va AI orqali tahlil olish\n"
         "• /stat - Tizim statistikasi va saqlangan ma'lumotlar\n"
         "• /help - Botdan foydalanish bo'yicha yo'riqnoma\n\n"
         "💡 <b>O'zingiz tahlil qilish uchun kiritish formati:</b>\n"
@@ -206,13 +206,13 @@ def send_stat(message):
     total, won, lost, win_rate = get_db_stats()
     
     stat_text = (
-        "📊 <b>BOT MEMORY STATISTIKASI</b>\n\n"
+        "📊 <b>BOT MEMORY STATISTIKASI (Barcha Bosqichlar)</b>\n\n"
         f"• Jami bashoratlar soni: <b>{total}</b>\n"
-        f"• Yutganlar (WON): <b>{won}</b>\n"
-        f"• Yutqazganlar (LOST): <b>{lost}</b>\n"
-        f"• AI Aniq darajasi: <b>%{win_rate:.1f}</b>\n\n"
+        f"• Muvaffaqiyatli (WON): <b>{won}</b>\n"
+        f"• Muvaffaqiyatsiz (LOST): <b>{lost}</b>\n"
+        f"• AI Aniqlik Darajasi: <b>%{win_rate:.1f}</b>\n\n"
         "• AI Modeli: <b>Adaptive Odds Engine v2</b>\n"
-        "• API Manbasi: <b>Live Sports Data Stream 🟢</b>\n"
+        "• Live API: <b>Aktiv 🟢</b>\n"
         "• Baza: <b>bot_memory.db (Aktiv 🟢)</b>\n"
         "• Vaqt zonasi: <b>Asia/Tashkent (GMT+5)</b>"
     )
