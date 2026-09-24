@@ -245,5 +245,12 @@ def custom_analysis(message):
 if __name__ == '__main__':
     Thread(target=run_flask).start()
     print("Flask Server yuritildi!")
-    bot.infinity_polling()
+    if __name__ == '__main__':
+    Thread(target=run_flask).start()
+    print("Flask Server yuritildi!")
+    
+    # Eski so'rovlarni tozalash va to'qnashuvni oldini olish uchun:
+    bot.remove_webhook()
+    bot.infinity_polling(skip_pending=True)
+    
     
