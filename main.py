@@ -117,7 +117,6 @@ def get_current_time_str():
     return now.strftime("%d.%m.%Y | %H:%M")
 
 def generate_ai_signal(match=None, team1_score=0, team2_score=0, init_g1_odds=None, curr_g1_odds=None, xg1=None, xg2=None, match_time=None):
-    # Parametr kiritilmagan bo'lsa, 3-bosqich API'dan avtomatik oladi
     if match is None:
         match, team1_score, team2_score, init_g1_odds, curr_g1_odds, xg1, xg2 = fetch_live_matches_from_api()
 
@@ -139,7 +138,6 @@ def generate_ai_signal(match=None, team1_score=0, team2_score=0, init_g1_odds=No
     exact_score = predict_exact_score(xg1, xg2)
     main_pick = "G'1 yoki 1X" if adjusted_prob > 50 else "X2"
     
-    # Bazaga avtomatik saqlash (2-bosqich)
     save_prediction(match, main_pick, init_g1_odds, curr_g1_odds)
     
     time_display = match_time if match_time else get_current_time_str()
@@ -245,12 +243,5 @@ def custom_analysis(message):
 if __name__ == '__main__':
     Thread(target=run_flask).start()
     print("Flask Server yuritildi!")
-    if __name__ == '__main__':
-    Thread(target=run_flask).start()
-    print("Flask Server yuritildi!")
-    
-    # Eski so'rovlarni tozalash va to'qnashuvni oldini olish uchun:
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
-    
-    
