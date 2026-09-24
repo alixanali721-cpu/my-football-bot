@@ -10,7 +10,6 @@ app = Flask(__name__)
 def home():
     return "Bot status: ACTIVE (Adaptive AI & Odds Tracker)"
 
-# --- BAZANI SOZLASH (Natijalarni saqlash va o'rganish uchun) ---
 def init_db():
     conn = sqlite3.connect('bot_memory.db')
     cursor = conn.cursor()
@@ -29,9 +28,7 @@ def init_db():
 
 init_db()
 
-# --- KOEFFITSIENTLAR VA AI TAHLIL LOGIKASI ---
 def analyze_odds_movement(initial_odds, current_odds):
-    """Koeffitsientlar tushishi/ko'tarilishini tahlil qiladi"""
     if initial_odds <= 0:
         return "STABLE", 0.0
     
@@ -46,12 +43,10 @@ def analyze_odds_movement(initial_odds, current_odds):
 
 def generate_ai_signal(match, team1_score, team2_score, init_g1_odds, curr_g1_odds, xg1, xg2):
     trend, percent = analyze_odds_movement(init_g1_odds, curr_g1_odds)
-    
-    # Adaptiv ehtimollik formulasi (xG + Odds Trend)
     base_prob = (xg1 / (xg1 + xg2 + 0.01)) * 100
     
     if "DROPPING" in trend:
-        adjusted_prob = min(base_prob + 8, 95)  # Koeffitsient tushayotgan bo'lsa ehtimollik oshiriladi
+        adjusted_prob = min(base_prob + 8, 95)
     elif "RISING" in trend:
         adjusted_prob = max(base_prob - 8, 5)
     else:
@@ -72,7 +67,6 @@ def generate_ai_signal(match, team1_score, team2_score, init_g1_odds, curr_g1_od
     )
     return text
 
-# Telegram Bot Tokeningiz va Chat ID'ingizni kiritishingiz mumkin
 BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
 CHAT_ID = "YOUR_CHAT_ID_HERE"
 
