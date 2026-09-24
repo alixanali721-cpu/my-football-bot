@@ -1,15 +1,21 @@
 import os
 import requests
+import sqlite3
 from flask import Flask
 from threading import Thread
-import sqlite3
+import telebot
 
+# --- FLASK SERVER (Render doimiy ishlashi uchun) ---
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot status: ACTIVE (Adaptive AI & Odds Tracker)"
 
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+# --- BAZANI SOZLASH ---
 def init_db():
     conn = sqlite3.connect('bot_memory.db')
     cursor = conn.cursor()
@@ -28,6 +34,7 @@ def init_db():
 
 init_db()
 
+# --- AI ALGORITMI VA TAHLIL ---
 def analyze_odds_movement(initial_odds, current_odds):
     if initial_odds <= 0:
         return "STABLE", 0.0
@@ -41,7 +48,7 @@ def analyze_odds_movement(initial_odds, current_odds):
     else:
         return "STABLE", change_percent
 
-def generate_ai_signal(match, team1_score, team2_score, init_g1_odds, curr_g1_odds, xg1, xg2):
+def generate_ai_signal(match="10 de Noviembre Wilstermann Cooperativas vs Real Cotagaita", team1_score=0, team2_score=0, init_g1_odds=1.85, curr_g1_odds=1.67, xg1=1.4, xg2=0.6):
     trend, percent = analyze_odds_movement(init_g1_odds, curr_g1_odds)
     base_prob = (xg1 / (xg1 + xg2 + 0.01)) * 100
     
@@ -55,7 +62,7 @@ def generate_ai_signal(match, team1_score, team2_score, init_g1_odds, curr_g1_od
     risk = "PAST RISK 🟢" if adjusted_prob > 65 else ("O'RTA RISK ⚠️" if adjusted_prob > 45 else "YUQORI RISK 🔴")
     
     text = (
-        f"🧠 **AI ADAPTIV & KOEFFITSIENT TAHLILI**\n\n"
+        f"🎯 **AI LIVE & KOEFFITSIENT TAHLILI**\n\n"
         f"⚽ **O'yin:** {match}\n"
         f"📊 **Hisob:** ({team1_score}) vs ({team2_score})\n"
         f"📉 **Koeffitsient dinamikasi:** {trend} ({percent:.1f}%)\n"
@@ -67,22 +74,17 @@ def generate_ai_signal(match, team1_score, team2_score, init_g1_odds, curr_g1_od
     )
     return text
 
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
-CHAT_ID = "YOUR_CHAT_ID_HERE"
+# --- TELEGRAM BOT QISMI ---
+TOKEN = "8844618317:AAHIf8YAuHNl3IBl-hPnDJP0h1Jx-Fzy1LA"
+bot = telebot.TeleBot(TOKEN)
 
-def send_telegram_msg(message):
-    if BOT_TOKEN != "YOUR_BOT_TOKEN_HERE":
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
-        try:
-            requests.post(url, json=payload)
-        except Exception as e:
-            print("Xatolik:", e)
-
-def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+@bot.message_handler(commands=['start', 'live'])
+def send_analysis(message):
+    analysis_text = generate_ai_signal()
+    bot.reply_to(message, analysis_text, parse_mode="Markdown")
 
 if __name__ == '__main__':
     Thread(target=run_flask).start()
-    print("Flask Server Yuritildi!")
+    print("Flask Server yuritildi!")
+    bot.infinity_polling()
     
